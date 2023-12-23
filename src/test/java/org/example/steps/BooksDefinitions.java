@@ -9,14 +9,19 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.restassured.http.ContentType;
+import io.restassured.http.Cookies;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import org.example.data.AppConfig;
 import org.example.dto.Book;
-import org.junit.Assert;
+import org.example.dto.ErrorMessage;
+
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static io.restassured.RestAssured.given;
@@ -24,55 +29,68 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class GetBooksDefinitions {
+@Getter
+@Setter
+public class BooksDefinitions {
     private RequestSpecification requestSpecification;
-    public Response response;
-    protected String baseUri = AppConfig.getProperty("uri");
+    private Response response;
+    private final String baseUri = AppConfig.getProperty("uri");
+    private String endpoint;
     private Map<String, String> dataTable = Map.of();
-
-    protected Book book;
-
+    private Book book;
     List<Book> books;
+    private String username;
+    private String password;
+    private ErrorMessage errorMessage;
+    private String currentPath;
+    private Cookies cookies = new Cookies();
 
-    @Given("User check books")
-    public void user_check_books() {
-    }
-
-    @When("User is authorized")
-    public void userIsAuthorized() {
-
-
+    @Then("User can see empty response body")
+    public void returnEmptyResponseBody() {
+        assertTrue(response.getBody().asString().isEmpty());
     }
 
     @Then("User can see the list of books")
-    public void returnListOfBooks() {
+    public void returnListOfBooks() throws JsonProcessingException {
+        if (!response.getBody().asString().isEmpty()) {
+            assertFalse(response.getBody().asString().isEmpty());
+            saveListOfBooks();
+        } else {
+            System.out.println("RESPONSE IS EMPTY!");
+        }
+
     }
 
-    @When("User is authorized with {string}")
+    @When("User is authorized with default user")
     public void userIsAuthorizedWithDefaultUser() {
-
+        username = AppConfig.getProperty("user");
+        password = AppConfig.getProperty("password");
     }
 
-    @When("User is authorized with {string} and {string}")
-    public void userIsAuthorizedWithUserNameAndNamePassword() {
+    @When("User is authorized with username {string} and password {string}")
+    public void userIsAuthorizedWithUserNameAndNamePassword(String providedUsername, String providedPassword) {
+        username = providedUsername;
+        password = providedPassword;
     }
 
-    @Given("create request to baseURI")
-    public void createRequestToBaseURI() {
+    @Given("User create request to endpoint {string}")
+    public void createRequestToBaseURI(String providedEndpoint) {
         requestSpecification = given().baseUri(baseUri);
+        endpoint = providedEndpoint;
     }
 
-    @When("Send GET request to {string}")
-    public void iSendRequestTo(String arg0) throws IOException {
-        response = requestSpecification.pathParams("books", arg0)
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                .when().get("/{books}");
-        books = new ObjectMapper().readValue(response.getBody().asString(), new TypeReference<>() {});
+    @When("Send GET request")
+    public void iSendRequestTo() {
+        response = requestSpecification
+                .pathParams("endpoint", endpoint)
+                .auth().basic(username, password)
+                .cookies(cookies)
+                .when().get("/{endpoint}");
     }
 
     @Then("Status code is {int}")
     public void responseCodeIs(int statusCode) {
-        response.getBody().print();
+        response.print();
         System.out.println("Status code is: " + response.getStatusCode());
         assertEquals(statusCode, response.getStatusCode());
     }
@@ -84,6 +102,10 @@ public class GetBooksDefinitions {
                 .pathParams("id", id)
                 .when()
                 .get("/{books}/{id}");
+        if (response.getStatusCode() >= 400 && !response.getBody().asString().isEmpty()) {
+            errorMessage = response.as(ErrorMessage.class);
+        }
+        currentPath = "/api/v1/" + endpoint + "/" + id;
     }
 
     @Then("response contains {string}")
@@ -108,15 +130,15 @@ public class GetBooksDefinitions {
     }
 
     @SneakyThrows
-    @When("Send POST request to {string}")
+    @When("Send POST request")
     public void sendPOSTRequestTo(String endpoint, DataTable table) {
         dataTable = table.asMap(String.class, String.class);
         createBookWithoutID();
-        response = requestSpecification.pathParams("books", endpoint)
+        response = requestSpecification.pathParams("endpoint", endpoint)
                 .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
                 .contentType(ContentType.JSON)
                 .body(new ObjectMapper().writeValueAsString(book))
-                .when().post("/{books}");
+                .when().post("/{endpoint}");
     }
 
     @SneakyThrows
@@ -154,7 +176,6 @@ public class GetBooksDefinitions {
                 .body(new ObjectMapper().writeValueAsString(book))
                 .when().put("/{books}");
     }
-
 
 
     @When("Send PUT request to {string} with ID {int}")
@@ -196,16 +217,16 @@ public class GetBooksDefinitions {
 
 
     @And("check that book with id {int} was deleted")
-    public void checkThatBookWithIdWasDeleted(int id) throws IOException {
+    public void checkThatBookWithIdWasDeleted(int id) {
         iSendRequestToWithParameter("books", id);
         response.print();
-        iSendRequestTo("books");
-        assertFalse(books.stream().anyMatch(x->x.getId() == id));
+        iSendRequestTo();
+        assertFalse(books.stream().anyMatch(x -> x.getId() == id));
     }
 
     @And("Change higher book's id to {int}")
     public void changeHigherBookSIdTo(int id) throws IOException {
-        iSendRequestTo("books");
+        iSendRequestTo();
         book.setId(id);
         System.out.println("Book be replaced with:" + book);
         response = requestSpecification
@@ -219,7 +240,7 @@ public class GetBooksDefinitions {
         responseCodeIs(200);
     }
 
-    private void createBookWithoutID(){
+    private void createBookWithoutID() {
         book = Book.builder()
                 .name(dataTable.get("name"))
                 .author(dataTable.get("author"))
@@ -230,7 +251,7 @@ public class GetBooksDefinitions {
                 .build();
     }
 
-    private void createBook(){
+    private void createBook() {
         book = Book.builder()
                 .id(Integer.parseInt(dataTable.get("id")))
                 .name(dataTable.get("name"))
@@ -240,5 +261,47 @@ public class GetBooksDefinitions {
                 .pages(Integer.parseInt(dataTable.get("pages")))
                 .price(Double.parseDouble(dataTable.get("price")))
                 .build();
+    }
+
+    private void saveListOfBooks() throws JsonProcessingException {
+        books = new ObjectMapper().readValue(response.getBody().asString(), new TypeReference<>() {
+        });
+    }
+
+    @Then("User see an error message with text {string}")
+    public void userSeeAnErrorMessage(String expectedErrorMessage) {
+        assertEquals(expectedErrorMessage, errorMessage.getError());
+    }
+
+    private String getDateWithZeroUTC() {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return simpleDateFormat.format(new Date()).replaceAll(".$", "");
+    }
+
+    @And("Check that error message contains correct timestamp")
+    public void checkThatErrorMessageContainsCorrectTimestamp() {
+        assertTrue(errorMessage.getTimestamp().contains(getDateWithZeroUTC()));
+    }
+
+    @And("Check that error message's status is {int}")
+    public void checkThatErrorMessageSStatusIs(int expectedStatus) {
+        assertEquals(expectedStatus, errorMessage.getStatus());
+    }
+
+    @And("Check that path is as expected")
+    public void checkThatPathIsAsExpected() {
+        assertEquals(currentPath,errorMessage.getPath());
+    }
+
+    @And("Cookies are saved")
+    public void cookiesAreSaved() {
+        cookies = response.getDetailedCookies();
+    }
+
+
+    @And("erase saved cookies")
+    public void eraseSavedCookies() {
+        cookies = new Cookies();
     }
 }

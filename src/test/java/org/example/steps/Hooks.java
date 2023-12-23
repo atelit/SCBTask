@@ -1,10 +1,14 @@
 package org.example.steps;
 
-import io.cucumber.java.Before;
+import io.cucumber.java.After;
+import io.restassured.http.Cookies;
+import io.restassured.specification.RequestSpecification;
+
+import static io.restassured.RestAssured.given;
 
 public class Hooks {
-    @Before(value = "@tag1")
-    public void firstHook(){
-
+    @After()
+    public void clearCookies(){
+        given().cookies(new Cookies());
     }
 }
