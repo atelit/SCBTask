@@ -87,7 +87,9 @@ public class BooksDefinitions {
                 .auth().basic(username, password)
                 .cookies(cookies)
                 .when().get("/{endpoint}");
-        saveListOfBooks();
+        if (response.statusCode() == 200) {
+            saveListOfBooks();
+        }
     }
 
     @Then("Status code is {int}")
@@ -199,7 +201,6 @@ public class BooksDefinitions {
                 .when().put("/{books}");
     }
 
-
     @When("Send PUT request to books with ID {string}")
     public void sendPUTRequestToWithID(String id, DataTable table) throws JsonProcessingException {
         dataTable = table.asMap(String.class, String.class);
@@ -236,14 +237,15 @@ public class BooksDefinitions {
         assertEquals(book, updatedBook);
     }
 
-    @When("Send DELETE request to {string} with id {int}")
-    public void sendDELETERequestToWithId(String endpoint, int id) {
+    @When("Send DELETE request to delete book with id {int}")
+    public void sendDELETERequestToWithId(int id) {
         response = requestSpecification
-                .pathParams("books", endpoint)
+                .pathParams("endpoint", endpoint)
                 .pathParams("id", id)
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                .when().delete("/{books}/{id}");
-
+                .auth().basic(username, password)
+                .when().delete("/{endpoint}/{id}");
+        checkForErrorResponse();
+        updateCurrentPath(id);
     }
 
     @And("book is")
@@ -259,6 +261,7 @@ public class BooksDefinitions {
         iSendRequestToWithParameter(lastCreatedBookId);
         response.print();
         sendGetRequest();
+        response.print();
         assertFalse(books.stream().anyMatch(x -> x.getId() == lastCreatedBookId));
     }
 
@@ -314,7 +317,8 @@ public class BooksDefinitions {
     }
 
     private void saveListOfBooks() throws JsonProcessingException {
-        books = new ObjectMapper().readValue(response.getBody().asString(), new TypeReference<>() {});
+        books = new ObjectMapper().readValue(response.getBody().asString(), new TypeReference<>() {
+        });
     }
 
     @Then("User see an error message with text {string}")
@@ -340,7 +344,7 @@ public class BooksDefinitions {
 
     @And("Check that path is as expected")
     public void checkThatPathIsAsExpected() {
-        assertEquals(currentPath,errorMessage.getPath());
+        assertEquals(currentPath, errorMessage.getPath());
     }
 
     @And("Cookies are saved")
@@ -413,7 +417,7 @@ public class BooksDefinitions {
         updateCurrentPath();
     }
 
-    private void checkForErrorResponse(){
+    private void checkForErrorResponse() {
         if (response.getStatusCode() >= 400 && !response.getBody().asString().isEmpty()) {
             errorMessage = response.as(ErrorMessage.class);
         }
@@ -440,5 +444,34 @@ public class BooksDefinitions {
     @And("save recently create book's id")
     public void saveRecentlyCreateBookSId() {
         lastCreatedBookId = response.as(Book.class).getId();
+    }
+
+    @When("User delete all book with ID greater then {int}")
+    public void userDeleteAllBookWithIDGreaterThen(int greaterIDForSave) throws JsonProcessingException {
+        for (Book currentBook : books) {
+            if (currentBook.getId() > greaterIDForSave) {
+                response = requestSpecification
+                        .pathParams("endpoint", endpoint)
+                        .pathParams("id", currentBook.getId())
+                        .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
+                        .contentType(ContentType.JSON)
+                        .body(new ObjectMapper().writeValueAsString(book))
+                        .when().delete("/{endpoint}/{id}");
+                responseCodeIs(200);
+            }
+        }
+    }
+
+    @Then("check that max {int} books left in the list of books")
+    public void checkThatOnlyBooksLeftInTheListOfBooks(int maxBooks) throws JsonProcessingException {
+        userGetAllBooks();
+        assertEquals(maxBooks, books.size(), "Expected max: " + maxBooks + " but list of books contains: " + books.size());
+    }
+
+
+    @And("check that book's ID equals {int} as expected")
+    public void checkThatBookSIDEqualsAsExpected(int expectedId) {
+        assertEquals(expectedId, response.as(Book.class).getId(),
+                "Book's id is " + response.as(Book.class).getId() + " but expected " + expectedId);
     }
 }

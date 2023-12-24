@@ -46,7 +46,7 @@ Feature: PUT method /books
     And Delete recently created book
 
   @Negative
-  Scenario: verify that Status code is 500 when user send PUT request to update non-exist book
+  Scenario: verify that Status code is 404 when user send PUT request to update non-exist book
     Given User create request to endpoint "books"
     And User is authorized with default user
     When Send PUT request to books with ID "99999"
@@ -57,11 +57,11 @@ Feature: PUT method /books
       | category    | Updated Test category    |
       | pages       | 448                      |
       | price       | 1                        |
-    Then User see an error message with text "Internal Server Error"
+    Then User see an error message with text "Not Found"
     And Check that error message contains correct timestamp
-    And Check that error message's status is 500
+    And Check that error message's status is 404
     And Check that path is as expected
-    And Status code is 500
+    And Status code is 404
 
   @Negative
   Scenario: verify that Status code is 405 when user send PUT request to update book without ID
@@ -97,4 +97,5 @@ Feature: PUT method /books
     When Send POST request with predefined book
     And Change higher book's id to 3
     Then Status code is 200
+    And check that book's ID equals 3 as expected
 

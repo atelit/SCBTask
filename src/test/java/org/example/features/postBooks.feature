@@ -4,6 +4,7 @@ Feature: POST method /books
   @Positive @Smoke
   Scenario: verify POST method /books
     Given User create request to endpoint "books"
+    And User is authorized with default user
     When Send POST request
       | name        | Refactoring: Improving the Design of Existing Code |
       | author      | Martin Fowler                                      |
@@ -17,6 +18,7 @@ Feature: POST method /books
   @Negative
   Scenario: Verify that system return 415 when user send request without Content-Type
     Given User create request to endpoint "books"
+    And User is authorized with default user
     When Send POST request with empty Content-Type
       | name        | Test Name        |
       | author      | Test author      |
