@@ -44,6 +44,7 @@ public class BooksDefinitions {
     private ErrorMessage errorMessage;
     private String currentPath;
     private Cookies cookies = new Cookies();
+    private int lastCreatedBookId;
 
     @Then("User can see empty response body")
     public void returnEmptyResponseBody() {
@@ -80,12 +81,13 @@ public class BooksDefinitions {
     }
 
     @When("Send GET request")
-    public void iSendRequestTo() {
+    public void sendGetRequest() throws JsonProcessingException {
         response = requestSpecification
                 .pathParams("endpoint", endpoint)
                 .auth().basic(username, password)
                 .cookies(cookies)
                 .when().get("/{endpoint}");
+        saveListOfBooks();
     }
 
     @Then("Status code is {int}")
@@ -95,17 +97,15 @@ public class BooksDefinitions {
         assertEquals(statusCode, response.getStatusCode());
     }
 
-    @When("Send GET request to {string} with parameter {int}")
-    public void iSendRequestToWithParameter(String endpoint, int id) {
-        response = requestSpecification.pathParams("books", endpoint)
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
+    @When("Send GET request to books with parameter {int}")
+    public void iSendRequestToWithParameter(int id) {
+        response = requestSpecification.pathParams("endpoint", endpoint)
+                .auth().basic(username, password)
                 .pathParams("id", id)
                 .when()
-                .get("/{books}/{id}");
-        if (response.getStatusCode() >= 400 && !response.getBody().asString().isEmpty()) {
-            errorMessage = response.as(ErrorMessage.class);
-        }
-        currentPath = "/api/v1/" + endpoint + "/" + id;
+                .get("/{endpoint}/{id}");
+        checkForErrorResponse();
+        updateCurrentPath(id);
     }
 
     @Then("response contains {string}")
@@ -131,8 +131,29 @@ public class BooksDefinitions {
 
     @SneakyThrows
     @When("Send POST request")
-    public void sendPOSTRequestTo(String endpoint, DataTable table) {
+    public void sendPOSTRequestTo(DataTable table) {
         dataTable = table.asMap(String.class, String.class);
+        createBookWithoutID();
+        response = requestSpecification.pathParams("endpoint", endpoint)
+                .auth().basic(username, password)
+                .contentType(ContentType.JSON)
+                .body(new ObjectMapper().writeValueAsString(book))
+                .when().post("/{endpoint}");
+        System.out.println("Created book: " + response.getBody().asString());
+    }
+
+    @When("Send POST request with predefined book")
+    public void sendPOSTRequestWithPredefinedBook() throws JsonProcessingException {
+        response = requestSpecification.pathParams("endpoint", endpoint)
+                .auth().basic(username, password)
+                .contentType(ContentType.JSON)
+                .body(new ObjectMapper().writeValueAsString(book))
+                .when().post("/{endpoint}");
+    }
+
+    @SneakyThrows
+    @When("Send POST request to books with predefined book")
+    public void sendPOSTRequestTo() {
         createBookWithoutID();
         response = requestSpecification.pathParams("endpoint", endpoint)
                 .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
@@ -141,28 +162,29 @@ public class BooksDefinitions {
                 .when().post("/{endpoint}");
     }
 
-    @SneakyThrows
-    @When("Send POST request to {string} with predefined book")
-    public void sendPOSTRequestTo(String endpoint) {
-        createBookWithoutID();
-        response = requestSpecification.pathParams("books", endpoint)
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                .contentType(ContentType.JSON)
-                .body(new ObjectMapper().writeValueAsString(book))
-                .when().post("/{books}");
-    }
-
     @Then("check that book was created")
     public void checkThatBookWasCreated() {
-        response.print();
-        Book book = response.as(Book.class);
+        Book expectedBook = response.as(Book.class);
         assertAll(
-                () -> assertThat(book.getName(), equalTo(dataTable.get("name"))),
-                () -> assertThat(book.getAuthor(), equalTo(dataTable.get("author"))),
-                () -> assertThat(book.getPublication(), equalTo(dataTable.get("publication"))),
-                () -> assertThat(book.getCategory(), equalTo(dataTable.get("category"))),
-                () -> assertThat(book.getPages(), equalTo(Integer.parseInt(dataTable.get("pages")))),
-                () -> assertThat(book.getPrice(), equalTo(Double.parseDouble(dataTable.get("price"))))
+                () -> assertThat(expectedBook.getName(), equalTo(dataTable.get("name"))),
+                () -> assertThat(expectedBook.getAuthor(), equalTo(dataTable.get("author"))),
+                () -> assertThat(expectedBook.getPublication(), equalTo(dataTable.get("publication"))),
+                () -> assertThat(expectedBook.getCategory(), equalTo(dataTable.get("category"))),
+                () -> assertThat(expectedBook.getPages(), equalTo(Integer.parseInt(dataTable.get("pages")))),
+                () -> assertThat(expectedBook.getPrice(), equalTo(Double.parseDouble(dataTable.get("price"))))
+        );
+    }
+
+    @Then("Verify fields of recently created book")
+    public void verifyFieldsOfRecentlyCreatedBook() {
+        Book actualBook = response.as(Book.class);
+        assertAll(
+                () -> assertEquals(book.getName(), actualBook.getName(), "Book's name is not as expected. Book's id = " + actualBook.getId().toString()),
+                () -> assertEquals(book.getAuthor(), actualBook.getAuthor(), "Book's author is not as expected. Book's id = " + actualBook.getId().toString()),
+                () -> assertEquals(book.getPublication(), actualBook.getPublication(), "Book's publication is not as expected. Book's id = " + actualBook.getId().toString()),
+                () -> assertEquals(book.getCategory(), actualBook.getCategory(), "Book's category is not as expected. Book's id = " + actualBook.getId().toString()),
+                () -> assertEquals(book.getPages(), actualBook.getPages(), "Book's pages is not as expected. Book's id = " + actualBook.getId().toString()),
+                () -> assertEquals(book.getPrice(), actualBook.getPrice(), "Book's price is not as expected. Book's id = " + actualBook.getId().toString())
         );
     }
 
@@ -178,17 +200,33 @@ public class BooksDefinitions {
     }
 
 
-    @When("Send PUT request to {string} with ID {int}")
-    public void sendPUTRequestToWithID(String endpoint, int id, DataTable table) throws JsonProcessingException {
+    @When("Send PUT request to books with ID {string}")
+    public void sendPUTRequestToWithID(String id, DataTable table) throws JsonProcessingException {
         dataTable = table.asMap(String.class, String.class);
         createBook();
         response = requestSpecification
-                .pathParams("books", endpoint)
+                .pathParams("endpoint", endpoint)
                 .pathParams("id", id)
                 .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
                 .contentType(ContentType.JSON)
                 .body(new ObjectMapper().writeValueAsString(book))
-                .when().put("/{books}/{id}");
+                .when().put("/{endpoint}/{id}");
+        checkForErrorResponse();
+        updateCurrentPath(Integer.parseInt(id));
+    }
+
+    @When("Send PUT request to update recently created book")
+    public void sendPutRequestToUpdateRecentlyCreatedBook(DataTable table) throws JsonProcessingException {
+        dataTable = table.asMap(String.class, String.class);
+        lastCreatedBookId = response.as(Book.class).getId();
+        createBook(lastCreatedBookId);
+        response = requestSpecification
+                .pathParams("endpoint", endpoint)
+                .pathParams("id", lastCreatedBookId)
+                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
+                .contentType(ContentType.JSON)
+                .body(new ObjectMapper().writeValueAsString(book))
+                .when().put("/{endpoint}/{id}");
     }
 
     @Then("check that book was updated")
@@ -216,26 +254,26 @@ public class BooksDefinitions {
     }
 
 
-    @And("check that book with id {int} was deleted")
-    public void checkThatBookWithIdWasDeleted(int id) {
-        iSendRequestToWithParameter("books", id);
+    @And("check that last created book was deleted")
+    public void checkThatBookWithIdWasDeleted() throws JsonProcessingException {
+        iSendRequestToWithParameter(lastCreatedBookId);
         response.print();
-        iSendRequestTo();
-        assertFalse(books.stream().anyMatch(x -> x.getId() == id));
+        sendGetRequest();
+        assertFalse(books.stream().anyMatch(x -> x.getId() == lastCreatedBookId));
     }
 
     @And("Change higher book's id to {int}")
     public void changeHigherBookSIdTo(int id) throws IOException {
-        iSendRequestTo();
+        sendGetRequest();
         book.setId(id);
         System.out.println("Book be replaced with:" + book);
         response = requestSpecification
-                .pathParams("books", "books")
+                .pathParams("endpoint", endpoint)
                 .pathParams("id", books.stream().max(Comparator.comparing(Book::getId)).orElseThrow(NoSuchElementException::new).getId())
                 .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
                 .contentType(ContentType.JSON)
                 .body(new ObjectMapper().writeValueAsString(book))
-                .when().put("/{books}/{id}");
+                .when().put("/{endpoint}/{id}");
         System.out.println("Book replaced: " + response.asString());
         responseCodeIs(200);
     }
@@ -263,9 +301,20 @@ public class BooksDefinitions {
                 .build();
     }
 
+    private void createBook(int bookId) {
+        book = Book.builder()
+                .id(bookId)
+                .name(dataTable.get("name"))
+                .author(dataTable.get("author"))
+                .publication(dataTable.get("publication"))
+                .category(dataTable.get("category"))
+                .pages(Integer.parseInt(dataTable.get("pages")))
+                .price(Double.parseDouble(dataTable.get("price")))
+                .build();
+    }
+
     private void saveListOfBooks() throws JsonProcessingException {
-        books = new ObjectMapper().readValue(response.getBody().asString(), new TypeReference<>() {
-        });
+        books = new ObjectMapper().readValue(response.getBody().asString(), new TypeReference<>() {});
     }
 
     @Then("User see an error message with text {string}")
@@ -299,9 +348,97 @@ public class BooksDefinitions {
         cookies = response.getDetailedCookies();
     }
 
-
     @And("erase saved cookies")
     public void eraseSavedCookies() {
         cookies = new Cookies();
+    }
+
+    @When("Send POST request with empty Content-Type")
+    public void sendPOSTRequestWithEmptyContentType(DataTable table) throws JsonProcessingException {
+        dataTable = table.asMap(String.class, String.class);
+        createBookWithoutID();
+        response = requestSpecification.pathParams("endpoint", endpoint)
+                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
+                .body(new ObjectMapper().writeValueAsString(book))
+                .when().post("/{endpoint}");
+        if (response.getStatusCode() >= 400 && !response.getBody().asString().isEmpty()) {
+            errorMessage = response.as(ErrorMessage.class);
+        }
+        currentPath = "/api/v1/" + endpoint;
+    }
+
+    @And("User try to add next book: {string}, {string}, {string}, {string}, {string}, {string}")
+    public void userTryToAddNextBookNameAuthorPublicationCategoryPagesPrice(String name, String author, String publication, String category, String pages, String price) {
+        book = Book.builder()
+                .name(name)
+                .author(author)
+                .publication(publication)
+                .category(category)
+                .pages(Integer.parseInt(pages))
+                .price(Double.parseDouble(price))
+                .build();
+    }
+
+    @And("Delete recently created book")
+    public void deleteRecentlyCreatedBook() {
+        lastCreatedBookId = response.as(Book.class).getId();
+        response = requestSpecification.pathParams("endpoint", endpoint, "id", lastCreatedBookId)
+                .auth().basic(username, password)
+                .when().delete("/{endpoint}/{id}");
+    }
+
+    @And("Check that recently created books is deleted")
+    public void checkThatRecentlyCreatedBooksIsDeleted() throws JsonProcessingException {
+        response = requestSpecification
+                .pathParams("endpoint", endpoint)
+                .auth().basic(username, password)
+                .when().get("/{endpoint}");
+        response.print();
+        saveListOfBooks();
+        assertFalse(books.stream().anyMatch(x -> x.getId() == lastCreatedBookId));
+    }
+
+    @When("Send PUT request to books with empty ID")
+    public void sendPUTRequestToBooksWithEmpty(DataTable table) throws JsonProcessingException {
+        dataTable = table.asMap(String.class, String.class);
+        createBookWithoutID();
+        response = requestSpecification
+                .pathParams("endpoint", endpoint)
+                .pathParams("id", "")
+                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
+                .contentType(ContentType.JSON)
+                .body(new ObjectMapper().writeValueAsString(book))
+                .when().put("/{endpoint}/{id}");
+        checkForErrorResponse();
+        updateCurrentPath();
+    }
+
+    private void checkForErrorResponse(){
+        if (response.getStatusCode() >= 400 && !response.getBody().asString().isEmpty()) {
+            errorMessage = response.as(ErrorMessage.class);
+        }
+    }
+
+    private void updateCurrentPath(int id) {
+        currentPath = "/api/v1/" + endpoint + "/" + id;
+    }
+
+    private void updateCurrentPath() {
+        currentPath = "/api/v1/" + endpoint + "/";
+    }
+
+    @And("User get all books")
+    public void userGetAllBooks() throws JsonProcessingException {
+        response = requestSpecification
+                .pathParams("endpoint", endpoint)
+                .auth().basic(username, password)
+                .when().get("/{endpoint}");
+        response.print();
+        saveListOfBooks();
+    }
+
+    @And("save recently create book's id")
+    public void saveRecentlyCreateBookSId() {
+        lastCreatedBookId = response.as(Book.class).getId();
     }
 }

@@ -24,9 +24,11 @@ Feature: GET method /books
       | user3    |              |
       |          | password     |
 
+  @Positive
   Scenario: verify response value for GET method /books
     Given User create request to endpoint "books"
-    When Send GET request to "books" with parameter 2
+    And User is authorized with default user
+    When Send GET request to books with parameter 2
     Then response contains data
       | id          | 2                                   |
       | name        | Test Driven Development: By Example |
@@ -37,15 +39,18 @@ Feature: GET method /books
       | price       | 29.26                               |
     And Status code is 200
 
+  @Negative
   Scenario: User trying to read non exist book
     Given User create request to endpoint "books"
-    When Send GET request to "books" with parameter 999999
+    And User is authorized with default user
+    When Send GET request to books with parameter 999999
     Then User see an error message with text "Not Found"
     And Check that error message contains correct timestamp
     And Check that error message's status is 404
     And Check that path is as expected
     And Status code is 404
 
+  @Positive
   Scenario: Check that cookies are working as expected
     Given User create request to endpoint "books"
     And User is authorized with default user

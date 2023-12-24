@@ -1,31 +1,22 @@
 Feature: DELETE method /books
   positive and negative tests for DELETE method /books
 
-  Background: create user with id=3
-    Given create request to baseURI
-    And book is
-      | id          | 3                        |
-      | name        | Updated Test Name        |
-      | author      | Updated Test author      |
-      | publication | Updated Test publication |
-      | category    | Updated Test category    |
-      | pages       | 111                      |
-      | price       | 1                        |
-    When Send POST request to "books" with predefined book
-    And Change higher book's id to 3
-    Then Status code is 200
 
-    #Response code is 200 but not 201
+  Background: Creating one books for next deletion
+    Given User create request to endpoint "books"
+    And User is authorized with default user
+    When Send POST request
+      | name        | Test Name        |
+      | author      | Test author      |
+      | publication | Test publication |
+      | category    | Test category    |
+      | pages       | 999              |
+      | price       | 1                |
+    And save recently create book's id
+
   Scenario: verify DELETE method /books
-    Given create request to baseURI
-    When Send DELETE request to "books" with id 3
-    And book is
-      | id          | 3                        |
-      | name        | Updated Test Name        |
-      | author      | Updated Test author      |
-      | publication | Updated Test publication |
-      | category    | Updated Test category    |
-      | pages       | 111                      |
-      | price       | 1                        |
+    Given User create request to endpoint "books"
+    And User is authorized with default user
+    When Delete recently created book
     Then Status code is 200
-    And check that book with id 3 was deleted
+    And check that last created book was deleted
