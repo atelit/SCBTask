@@ -47,7 +47,7 @@ Feature: POST method /books
       | price       | 1                |
     Then Status code is 401
 
-  @Negative
+  @Positive
   Scenario Outline: Verify all fields while creating a multiple books
     Given User create request to endpoint "books"
     And User is authorized with default user
