@@ -18,3 +18,11 @@ SCBTask
 
 ## Reports
 Report can be find in directory `report`.  
+
+## Author's comment
+For solving the task were used: Stream API, Collections, REST API, Lombok, Cucumber and Cucumber's Pretty reports
+Project could be and will be refactored in the future.  
+As minimum: needs to make RestAPI request builder and split BooksDefinition class 
+Will be good to add some comments for some methods.
+
+Good luck and have fun!
