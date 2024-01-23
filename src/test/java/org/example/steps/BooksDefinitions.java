@@ -82,11 +82,7 @@ public class BooksDefinitions {
 
     @When("Send GET request")
     public void sendGetRequest() throws JsonProcessingException {
-        response = requestSpecification
-                .pathParams("endpoint", endpoint)
-                .auth().basic(username, password)
-                .cookies(cookies)
-                .when().get("/{endpoint}");
+        response = requestSpecification.pathParams("endpoint", endpoint).auth().basic(username, password).cookies(cookies).when().get("/{endpoint}");
         if (response.statusCode() == 200) {
             saveListOfBooks();
         }
@@ -101,11 +97,7 @@ public class BooksDefinitions {
 
     @When("Send GET request to books with parameter {int}")
     public void iSendRequestToWithParameter(int id) {
-        response = requestSpecification.pathParams("endpoint", endpoint)
-                .auth().basic(username, password)
-                .pathParams("id", id)
-                .when()
-                .get("/{endpoint}/{id}");
+        response = requestSpecification.pathParams("endpoint", endpoint).auth().basic(username, password).pathParams("id", id).when().get("/{endpoint}/{id}");
         checkForErrorResponse();
         updateCurrentPath(id);
     }
@@ -120,15 +112,7 @@ public class BooksDefinitions {
     public void responseContainsData(DataTable table) {
         Map<String, String> dataTable = table.asMap(String.class, String.class);
         Book book = response.as(Book.class);
-        assertAll(
-                () -> assertThat(book.getId(), equalTo(Integer.parseInt(dataTable.get("id")))),
-                () -> assertThat(book.getName(), equalTo(dataTable.get("name"))),
-                () -> assertThat(book.getAuthor(), equalTo(dataTable.get("author"))),
-                () -> assertThat(book.getPublication(), equalTo(dataTable.get("publication"))),
-                () -> assertThat(book.getCategory(), equalTo(dataTable.get("category"))),
-                () -> assertThat(book.getPages(), equalTo(Integer.parseInt(dataTable.get("pages")))),
-                () -> assertThat(book.getPrice(), equalTo(Double.parseDouble(dataTable.get("price"))))
-        );
+        assertAll(() -> assertThat(book.getId(), equalTo(Integer.parseInt(dataTable.get("id")))), () -> assertThat(book.getName(), equalTo(dataTable.get("name"))), () -> assertThat(book.getAuthor(), equalTo(dataTable.get("author"))), () -> assertThat(book.getPublication(), equalTo(dataTable.get("publication"))), () -> assertThat(book.getCategory(), equalTo(dataTable.get("category"))), () -> assertThat(book.getPages(), equalTo(Integer.parseInt(dataTable.get("pages")))), () -> assertThat(book.getPrice(), equalTo(Double.parseDouble(dataTable.get("price")))));
     }
 
     @SneakyThrows
@@ -136,82 +120,46 @@ public class BooksDefinitions {
     public void sendPOSTRequestTo(DataTable table) {
         dataTable = table.asMap(String.class, String.class);
         createBookWithoutID();
-        response = requestSpecification.pathParams("endpoint", endpoint)
-                .auth().basic(username, password)
-                .contentType(ContentType.JSON)
-                .body(new ObjectMapper().writeValueAsString(book))
-                .when().post("/{endpoint}");
+        response = requestSpecification.pathParams("endpoint", endpoint).auth().basic(username, password).contentType(ContentType.JSON).body(new ObjectMapper().writeValueAsString(book)).when().post("/{endpoint}");
         System.out.println("Created book: " + response.getBody().asString());
     }
 
     @When("Send POST request with predefined book")
     public void sendPOSTRequestWithPredefinedBook() throws JsonProcessingException {
-        response = requestSpecification.pathParams("endpoint", endpoint)
-                .auth().basic(username, password)
-                .contentType(ContentType.JSON)
-                .body(new ObjectMapper().writeValueAsString(book))
-                .when().post("/{endpoint}");
+        response = requestSpecification.pathParams("endpoint", endpoint).auth().basic(username, password).contentType(ContentType.JSON).body(new ObjectMapper().writeValueAsString(book)).when().post("/{endpoint}");
     }
 
     @SneakyThrows
     @When("Send POST request to books with predefined book")
     public void sendPOSTRequestTo() {
         createBookWithoutID();
-        response = requestSpecification.pathParams("endpoint", endpoint)
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                .contentType(ContentType.JSON)
-                .body(new ObjectMapper().writeValueAsString(book))
-                .when().post("/{endpoint}");
+        response = requestSpecification.pathParams("endpoint", endpoint).auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password")).contentType(ContentType.JSON).body(new ObjectMapper().writeValueAsString(book)).when().post("/{endpoint}");
     }
 
     @Then("check that book was created")
     public void checkThatBookWasCreated() {
         Book expectedBook = response.as(Book.class);
-        assertAll(
-                () -> assertThat(expectedBook.getName(), equalTo(dataTable.get("name"))),
-                () -> assertThat(expectedBook.getAuthor(), equalTo(dataTable.get("author"))),
-                () -> assertThat(expectedBook.getPublication(), equalTo(dataTable.get("publication"))),
-                () -> assertThat(expectedBook.getCategory(), equalTo(dataTable.get("category"))),
-                () -> assertThat(expectedBook.getPages(), equalTo(Integer.parseInt(dataTable.get("pages")))),
-                () -> assertThat(expectedBook.getPrice(), equalTo(Double.parseDouble(dataTable.get("price"))))
-        );
+        assertAll(() -> assertThat(expectedBook.getName(), equalTo(dataTable.get("name"))), () -> assertThat(expectedBook.getAuthor(), equalTo(dataTable.get("author"))), () -> assertThat(expectedBook.getPublication(), equalTo(dataTable.get("publication"))), () -> assertThat(expectedBook.getCategory(), equalTo(dataTable.get("category"))), () -> assertThat(expectedBook.getPages(), equalTo(Integer.parseInt(dataTable.get("pages")))), () -> assertThat(expectedBook.getPrice(), equalTo(Double.parseDouble(dataTable.get("price")))));
     }
 
     @Then("Verify fields of recently created book")
     public void verifyFieldsOfRecentlyCreatedBook() {
         Book actualBook = response.as(Book.class);
-        assertAll(
-                () -> assertEquals(book.getName(), actualBook.getName(), "Book's name is not as expected. Book's id = " + actualBook.getId().toString()),
-                () -> assertEquals(book.getAuthor(), actualBook.getAuthor(), "Book's author is not as expected. Book's id = " + actualBook.getId().toString()),
-                () -> assertEquals(book.getPublication(), actualBook.getPublication(), "Book's publication is not as expected. Book's id = " + actualBook.getId().toString()),
-                () -> assertEquals(book.getCategory(), actualBook.getCategory(), "Book's category is not as expected. Book's id = " + actualBook.getId().toString()),
-                () -> assertEquals(book.getPages(), actualBook.getPages(), "Book's pages is not as expected. Book's id = " + actualBook.getId().toString()),
-                () -> assertEquals(book.getPrice(), actualBook.getPrice(), "Book's price is not as expected. Book's id = " + actualBook.getId().toString())
-        );
+        assertAll(() -> assertEquals(book.getName(), actualBook.getName(), "Book's name is not as expected. Book's id = " + actualBook.getId().toString()), () -> assertEquals(book.getAuthor(), actualBook.getAuthor(), "Book's author is not as expected. Book's id = " + actualBook.getId().toString()), () -> assertEquals(book.getPublication(), actualBook.getPublication(), "Book's publication is not as expected. Book's id = " + actualBook.getId().toString()), () -> assertEquals(book.getCategory(), actualBook.getCategory(), "Book's category is not as expected. Book's id = " + actualBook.getId().toString()), () -> assertEquals(book.getPages(), actualBook.getPages(), "Book's pages is not as expected. Book's id = " + actualBook.getId().toString()), () -> assertEquals(book.getPrice(), actualBook.getPrice(), "Book's price is not as expected. Book's id = " + actualBook.getId().toString()));
     }
 
     @When("Send PUT request to {string}")
     public void sendPUTRequestTo(String endpoint, DataTable table) throws JsonProcessingException {
         dataTable = table.asMap(String.class, String.class);
         createBook();
-        response = requestSpecification.pathParams("books", endpoint)
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                .contentType(ContentType.JSON)
-                .body(new ObjectMapper().writeValueAsString(book))
-                .when().put("/{books}");
+        response = requestSpecification.pathParams("books", endpoint).auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password")).contentType(ContentType.JSON).body(new ObjectMapper().writeValueAsString(book)).when().put("/{books}");
     }
 
     @When("Send PUT request to books with ID {string}")
     public void sendPUTRequestToWithID(String id, DataTable table) throws JsonProcessingException {
         dataTable = table.asMap(String.class, String.class);
         createBook();
-        response = requestSpecification
-                .pathParams("endpoint", endpoint)
-                .pathParams("id", id)
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                .contentType(ContentType.JSON)
-                .body(new ObjectMapper().writeValueAsString(book))
-                .when().put("/{endpoint}/{id}");
+        response = requestSpecification.pathParams("endpoint", endpoint).pathParams("id", id).auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password")).contentType(ContentType.JSON).body(new ObjectMapper().writeValueAsString(book)).when().put("/{endpoint}/{id}");
         checkForErrorResponse();
         updateCurrentPath(Integer.parseInt(id));
     }
@@ -221,13 +169,7 @@ public class BooksDefinitions {
         dataTable = table.asMap(String.class, String.class);
         lastCreatedBookId = response.as(Book.class).getId();
         createBook(lastCreatedBookId);
-        response = requestSpecification
-                .pathParams("endpoint", endpoint)
-                .pathParams("id", lastCreatedBookId)
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                .contentType(ContentType.JSON)
-                .body(new ObjectMapper().writeValueAsString(book))
-                .when().put("/{endpoint}/{id}");
+        response = requestSpecification.pathParams("endpoint", endpoint).pathParams("id", lastCreatedBookId).auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password")).contentType(ContentType.JSON).body(new ObjectMapper().writeValueAsString(book)).when().put("/{endpoint}/{id}");
     }
 
     @Then("check that book was updated")
@@ -239,11 +181,7 @@ public class BooksDefinitions {
 
     @When("Send DELETE request to delete book with id {int}")
     public void sendDELETERequestToWithId(int id) {
-        response = requestSpecification
-                .pathParams("endpoint", endpoint)
-                .pathParams("id", id)
-                .auth().basic(username, password)
-                .when().delete("/{endpoint}/{id}");
+        response = requestSpecification.pathParams("endpoint", endpoint).pathParams("id", id).auth().basic(username, password).when().delete("/{endpoint}/{id}");
         checkForErrorResponse();
         updateCurrentPath(id);
     }
@@ -270,50 +208,21 @@ public class BooksDefinitions {
         sendGetRequest();
         book.setId(id);
         System.out.println("Book be replaced with:" + book);
-        response = requestSpecification
-                .pathParams("endpoint", endpoint)
-                .pathParams("id", books.stream().max(Comparator.comparing(Book::getId)).orElseThrow(NoSuchElementException::new).getId())
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                .contentType(ContentType.JSON)
-                .body(new ObjectMapper().writeValueAsString(book))
-                .when().put("/{endpoint}/{id}");
+        response = requestSpecification.pathParams("endpoint", endpoint).pathParams("id", books.stream().max(Comparator.comparing(Book::getId)).orElseThrow(NoSuchElementException::new).getId()).auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password")).contentType(ContentType.JSON).body(new ObjectMapper().writeValueAsString(book)).when().put("/{endpoint}/{id}");
         System.out.println("Book replaced: " + response.asString());
         responseCodeIs(200);
     }
 
     private void createBookWithoutID() {
-        book = Book.builder()
-                .name(dataTable.get("name"))
-                .author(dataTable.get("author"))
-                .publication(dataTable.get("publication"))
-                .category(dataTable.get("category"))
-                .pages(Integer.parseInt(dataTable.get("pages")))
-                .price(Double.parseDouble(dataTable.get("price")))
-                .build();
+        book = Book.builder().name(dataTable.get("name")).author(dataTable.get("author")).publication(dataTable.get("publication")).category(dataTable.get("category")).pages(Integer.parseInt(dataTable.get("pages"))).price(Double.parseDouble(dataTable.get("price"))).build();
     }
 
     private void createBook() {
-        book = Book.builder()
-                .id(Integer.parseInt(dataTable.get("id")))
-                .name(dataTable.get("name"))
-                .author(dataTable.get("author"))
-                .publication(dataTable.get("publication"))
-                .category(dataTable.get("category"))
-                .pages(Integer.parseInt(dataTable.get("pages")))
-                .price(Double.parseDouble(dataTable.get("price")))
-                .build();
+        book = Book.builder().id(Integer.parseInt(dataTable.get("id"))).name(dataTable.get("name")).author(dataTable.get("author")).publication(dataTable.get("publication")).category(dataTable.get("category")).pages(Integer.parseInt(dataTable.get("pages"))).price(Double.parseDouble(dataTable.get("price"))).build();
     }
 
     private void createBook(int bookId) {
-        book = Book.builder()
-                .id(bookId)
-                .name(dataTable.get("name"))
-                .author(dataTable.get("author"))
-                .publication(dataTable.get("publication"))
-                .category(dataTable.get("category"))
-                .pages(Integer.parseInt(dataTable.get("pages")))
-                .price(Double.parseDouble(dataTable.get("price")))
-                .build();
+        book = Book.builder().id(bookId).name(dataTable.get("name")).author(dataTable.get("author")).publication(dataTable.get("publication")).category(dataTable.get("category")).pages(Integer.parseInt(dataTable.get("pages"))).price(Double.parseDouble(dataTable.get("price"))).build();
     }
 
     private void saveListOfBooks() throws JsonProcessingException {
@@ -361,10 +270,7 @@ public class BooksDefinitions {
     public void sendPOSTRequestWithEmptyContentType(DataTable table) throws JsonProcessingException {
         dataTable = table.asMap(String.class, String.class);
         createBookWithoutID();
-        response = requestSpecification.pathParams("endpoint", endpoint)
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                .body(new ObjectMapper().writeValueAsString(book))
-                .when().post("/{endpoint}");
+        response = requestSpecification.pathParams("endpoint", endpoint).auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password")).body(new ObjectMapper().writeValueAsString(book)).when().post("/{endpoint}");
         if (response.getStatusCode() >= 400 && !response.getBody().asString().isEmpty()) {
             errorMessage = response.as(ErrorMessage.class);
         }
@@ -373,30 +279,18 @@ public class BooksDefinitions {
 
     @And("User try to add next book: {string}, {string}, {string}, {string}, {string}, {string}")
     public void userTryToAddNextBookNameAuthorPublicationCategoryPagesPrice(String name, String author, String publication, String category, String pages, String price) {
-        book = Book.builder()
-                .name(name)
-                .author(author)
-                .publication(publication)
-                .category(category)
-                .pages(Integer.parseInt(pages))
-                .price(Double.parseDouble(price))
-                .build();
+        book = Book.builder().name(name).author(author).publication(publication).category(category).pages(Integer.parseInt(pages)).price(Double.parseDouble(price)).build();
     }
 
     @And("Delete recently created book")
     public void deleteRecentlyCreatedBook() {
         lastCreatedBookId = response.as(Book.class).getId();
-        response = requestSpecification.pathParams("endpoint", endpoint, "id", lastCreatedBookId)
-                .auth().basic(username, password)
-                .when().delete("/{endpoint}/{id}");
+        response = requestSpecification.pathParams("endpoint", endpoint, "id", lastCreatedBookId).auth().basic(username, password).when().delete("/{endpoint}/{id}");
     }
 
     @And("Check that recently created books is deleted")
     public void checkThatRecentlyCreatedBooksIsDeleted() throws JsonProcessingException {
-        response = requestSpecification
-                .pathParams("endpoint", endpoint)
-                .auth().basic(username, password)
-                .when().get("/{endpoint}");
+        response = requestSpecification.pathParams("endpoint", endpoint).auth().basic(username, password).when().get("/{endpoint}");
         response.print();
         saveListOfBooks();
         assertFalse(books.stream().anyMatch(x -> x.getId() == lastCreatedBookId));
@@ -406,13 +300,7 @@ public class BooksDefinitions {
     public void sendPUTRequestToBooksWithEmpty(DataTable table) throws JsonProcessingException {
         dataTable = table.asMap(String.class, String.class);
         createBookWithoutID();
-        response = requestSpecification
-                .pathParams("endpoint", endpoint)
-                .pathParams("id", "")
-                .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                .contentType(ContentType.JSON)
-                .body(new ObjectMapper().writeValueAsString(book))
-                .when().put("/{endpoint}/{id}");
+        response = requestSpecification.pathParams("endpoint", endpoint).pathParams("id", "").auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password")).contentType(ContentType.JSON).body(new ObjectMapper().writeValueAsString(book)).when().put("/{endpoint}/{id}");
         checkForErrorResponse();
         updateCurrentPath();
     }
@@ -433,10 +321,7 @@ public class BooksDefinitions {
 
     @And("User get all books")
     public void userGetAllBooks() throws JsonProcessingException {
-        response = requestSpecification
-                .pathParams("endpoint", endpoint)
-                .auth().basic(username, password)
-                .when().get("/{endpoint}");
+        response = requestSpecification.pathParams("endpoint", endpoint).auth().basic(username, password).when().get("/{endpoint}");
         response.print();
         saveListOfBooks();
     }
@@ -450,13 +335,7 @@ public class BooksDefinitions {
     public void userDeleteAllBookWithIDGreaterThen(int greaterIDForSave) throws JsonProcessingException {
         for (Book currentBook : books) {
             if (currentBook.getId() > greaterIDForSave) {
-                response = requestSpecification
-                        .pathParams("endpoint", endpoint)
-                        .pathParams("id", currentBook.getId())
-                        .auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password"))
-                        .contentType(ContentType.JSON)
-                        .body(new ObjectMapper().writeValueAsString(book))
-                        .when().delete("/{endpoint}/{id}");
+                response = requestSpecification.pathParams("endpoint", endpoint).pathParams("id", currentBook.getId()).auth().basic(AppConfig.getProperty("user"), AppConfig.getProperty("password")).contentType(ContentType.JSON).body(new ObjectMapper().writeValueAsString(book)).when().delete("/{endpoint}/{id}");
                 responseCodeIs(200);
             }
         }
@@ -471,7 +350,6 @@ public class BooksDefinitions {
 
     @And("check that book's ID equals {int} as expected")
     public void checkThatBookSIDEqualsAsExpected(int expectedId) {
-        assertEquals(expectedId, response.as(Book.class).getId(),
-                "Book's id is " + response.as(Book.class).getId() + " but expected " + expectedId);
+        assertEquals(expectedId, response.as(Book.class).getId(), "Book's id is " + response.as(Book.class).getId() + " but expected " + expectedId);
     }
 }
